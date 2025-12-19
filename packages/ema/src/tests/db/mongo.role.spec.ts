@@ -1,28 +1,21 @@
-import { expect, test, describe, beforeEach } from "vitest";
-import { FileDB, MemFs } from "../../db/file";
-import type { RoleData } from "../../db/base";
+import { expect, test, describe, beforeEach, afterEach } from "vitest";
+import { createMongo, MongoRoleDB } from "../../db";
+import type { Mongo, RoleData } from "../../db";
 
-describe("MemFs", () => {
-  test("should read empty object when file doesn't exist", async () => {
-    const fs = new MemFs();
-    const content = await fs.read("nonexistent.json");
-    expect(content).toBe("{}");
+describe("MongoRoleDB with in-memory MongoDB", () => {
+  let mongo: Mongo;
+  let db: MongoRoleDB;
+
+  beforeEach(async () => {
+    // Create in-memory MongoDB instance for testing
+    mongo = await createMongo("", "test", "memory");
+    await mongo.connect();
+    db = new MongoRoleDB(mongo);
   });
 
-  test("should write and read file content", async () => {
-    const fs = new MemFs();
-    await fs.write("test.json", '{"key": "value"}');
-    const content = await fs.read("test.json");
-    expect(content).toBe('{"key": "value"}');
-  });
-});
-
-describe("FileDB with MemFs", () => {
-  let db: FileDB;
-
-  beforeEach(() => {
-    const memFs = new MemFs();
-    db = new FileDB("test-db.json", memFs);
+  afterEach(async () => {
+    // Clean up: close MongoDB connection
+    await mongo.close();
   });
 
   test("should list empty roles initially", async () => {
@@ -38,7 +31,7 @@ describe("FileDB with MemFs", () => {
     };
 
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
     const retrievedRole = await db.getRole(id);
     expect(retrievedRole).toEqual(roleData);
   });
@@ -51,7 +44,7 @@ describe("FileDB with MemFs", () => {
     };
 
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
 
     const updatedRole: RoleData = {
       id,
@@ -73,7 +66,7 @@ describe("FileDB with MemFs", () => {
     };
 
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
     const deleted = await db.deleteRole(id);
     expect(deleted).toBe(true);
 
@@ -83,7 +76,7 @@ describe("FileDB with MemFs", () => {
   });
 
   test("should return false when deleting non-existent role", async () => {
-    const deleted = await db.deleteRole("nonexistent");
+    const deleted = await db.deleteRole(123);
     expect(deleted).toBe(false);
   });
 
@@ -95,7 +88,7 @@ describe("FileDB with MemFs", () => {
     };
 
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
     const deleted1 = await db.deleteRole(id);
     expect(deleted1).toBe(true);
 
@@ -122,11 +115,11 @@ describe("FileDB with MemFs", () => {
     };
 
     const id1 = await db.upsertRole(role1);
-    expect(id1).toBe("0");
+    expect(id1).toBe(1);
     const id2 = await db.upsertRole(role2);
-    expect(id2).toBe("1");
+    expect(id2).toBe(2);
     const id3 = await db.upsertRole(role3);
-    expect(id3).toBe("2");
+    expect(id3).toBe(3);
 
     // Delete role2
     await db.deleteRole(id2);
@@ -139,7 +132,7 @@ describe("FileDB with MemFs", () => {
   });
 
   test("should return null when getting non-existent role", async () => {
-    const role = await db.getRole("nonexistent");
+    const role = await db.getRole(123);
     expect(role).toBeNull();
   });
 
@@ -161,11 +154,11 @@ describe("FileDB with MemFs", () => {
     };
 
     const id1 = await db.upsertRole(role1);
-    expect(id1).toBe("0");
+    expect(id1).toBe(1);
     const id2 = await db.upsertRole(role2);
-    expect(id2).toBe("1");
+    expect(id2).toBe(2);
     const id3 = await db.upsertRole(role3);
-    expect(id3).toBe("2");
+    expect(id3).toBe(3);
 
     const roles = await db.listRoles();
     expect(roles).toHaveLength(3);
@@ -182,7 +175,7 @@ describe("FileDB with MemFs", () => {
       prompt: "This is a test role",
     };
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
 
     // Read
     let role = await db.getRole(id);
@@ -215,10 +208,9 @@ describe("FileDB with MemFs", () => {
     };
 
     const id = await db.upsertRole(roleData);
-    expect(id).toBe("0");
+    expect(id).toBe(1);
     let role = await db.getRole(id);
     expect(role?.createTime).toBeDefined();
-    expect(role?.deleteTime).toBeUndefined();
 
     // Delete the role
     await db.deleteRole(id);

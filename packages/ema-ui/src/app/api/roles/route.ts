@@ -12,14 +12,16 @@ import { getServer } from "../shared-server";
  */
 export async function GET(request: Request) {
   try {
-    const server = getServer();
+    const server = await getServer();
     const url = new URL(request.url);
-    const roleId = url.searchParams.get("id");
+    const rawRoleId = url.searchParams.get("id");
+    const roleId = Number.parseInt(rawRoleId ?? "");
 
-    if (!roleId) {
+    if (rawRoleId == null || Number.isNaN(roleId)) {
       return new Response(
         JSON.stringify({
-          error: "Role id is required as a query parameter (?id=...)",
+          error:
+            "A valid role id is required as a query parameter (?id=<number>)",
         }),
         {
           status: 400,
@@ -66,7 +68,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const server = getServer();
+    const server = await getServer();
     const body = await request.json();
     if (!body.name || !body.description || !body.prompt) {
       return new Response(
@@ -111,7 +113,7 @@ export async function POST(request: Request) {
  */
 export async function PUT(request: Request) {
   try {
-    const server = getServer();
+    const server = await getServer();
     const body = await request.json();
     if (!body.name || !body.description || !body.prompt) {
       return new Response(
@@ -182,7 +184,7 @@ export async function PUT(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const server = getServer();
+    const server = await getServer();
     const body = await request.json();
     const roleId = body.id;
 

@@ -63,17 +63,21 @@ export interface Mongo {
 }
 
 /**
- * Connects to the MongoDB database
+ * Creates a new MongoDB instance
  * @param uri - MongoDB connection string
  * @param dbName - MongoDB database name
  * @param kind - MongoDB implementation kind
  * @returns Promise resolving to the MongoDB instance
  */
-export async function connectMongo(
+export async function createMongo(
   uri: string,
   dbName: string,
   kind: "memory" | "remote",
 ): Promise<Mongo> {
+  if (!["memory", "remote"].includes(kind)) {
+    throw new Error(`Invalid kind: ${kind}. Must be "memory" or "remote".`);
+  }
+
   const impl: MongoProvider =
     kind === "memory"
       ? (await import("./mongo/memory")).MemoryMongo
